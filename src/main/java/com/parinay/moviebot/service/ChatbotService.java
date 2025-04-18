@@ -15,6 +15,7 @@ public class ChatbotService {
     public ChatbotService(MovieService movieService) {
         this.movieService = movieService;
     }
+    
 
     // Suggest movies based on user input (genre)
     public String suggestMovies(String genre) {
