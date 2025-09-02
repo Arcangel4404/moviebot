@@ -15,20 +15,20 @@ public class MovieService {
     private Long bookingIdCounter = 1L;
 
     public MovieService() {
-        // Mock movie data
         movies.add(new Movie(1L, "Inception", "Sci-Fi", 148));
         movies.add(new Movie(2L, "The Dark Knight", "Action", 152));
         movies.add(new Movie(3L, "Interstellar", "Sci-Fi", 169));
         movies.add(new Movie(4L, "La La Land", "Romance", 128));
         movies.add(new Movie(5L, "The Godfather", "Crime", 175));
+        movies.add(new Movie(6L, "Titanic", "Romance", 195));
+        movies.add(new Movie(7L, "The Matrix", "Sci-Fi", 136));
+        movies.add(new Movie(8L, "Gladiator", "Action", 155));
     }
 
-    // Get all movies
     public List<Movie> getAllMovies() {
         return movies;
     }
 
-    // Get movies by genre
     public List<Movie> getMoviesByGenre(String genre) {
         List<Movie> filtered = new ArrayList<>();
         for (Movie movie : movies) {
@@ -39,7 +39,6 @@ public class MovieService {
         return filtered;
     }
 
-    // Get movie by ID
     public Movie getMovieById(Long id) {
         return movies.stream()
                      .filter(m -> m.getId().equals(id))
@@ -47,20 +46,18 @@ public class MovieService {
                      .orElse(null);
     }
 
-    // Book a movie
     public String bookMovie(Long movieId, String username) {
         Movie movie = getMovieById(movieId);
         if (movie == null) {
-            return "❌ Movie with ID " + movieId + " not found.";
+            return "Movie with ID " + movieId + " not found.";
         }
 
         Booking booking = new Booking(bookingIdCounter++, movie.getId(), movie.getTitle(), username);
         bookings.add(booking);
 
-        return "✅ Booked \"" + movie.getTitle() + "\" for " + username + " (Booking ID: " + booking.getBookingId() + ")";
+        return "Booked \"" + movie.getTitle() + "\" for " + username + " (Booking ID: " + booking.getBookingId() + ")";
     }
 
-    // Get all bookings
     public List<Booking> getAllBookings() {
         return bookings;
     }

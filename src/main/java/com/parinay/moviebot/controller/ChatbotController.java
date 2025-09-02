@@ -1,14 +1,15 @@
 package com.parinay.moviebot.controller;
 
 import com.parinay.moviebot.model.Booking;
+import com.parinay.moviebot.model.Movie;
 import com.parinay.moviebot.service.MovieService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/chat")
-@CrossOrigin // allow frontend to make calls
+@CrossOrigin
 public class ChatbotController {
 
     private final MovieService movieService;
@@ -18,42 +19,73 @@ public class ChatbotController {
     }
 
     @GetMapping("/message")
-    public String chat(@RequestParam String text, @RequestParam(defaultValue = "User") String user) {
+    public Map<String, Object> chat(@RequestParam String text, @RequestParam(defaultValue = "User") String user) {
+        Map<String, Object> response = new HashMap<>();
         text = text.toLowerCase();
 
-        if (text.contains("sci-fi")) {
-            return "🧠 Try these Sci-Fi movies: Inception, Interstellar.";
-        } else if (text.contains("romance")) {
-            return "💖 Try: La La Land.";
-        } else if (text.contains("book")) {
-            // try to parse id
-            try {
-                String[] words = text.split(" ");
-                Long id = Long.parseLong(words[words.length - 1]);
-                return movieService.bookMovie(id, user);
-            } catch (Exception e) {
-                return "❌ Please say: book movie id 2";
-            }
-        } else if (text.contains("view bookings")) {
+        // Genre-based movie suggestions
+        if (matchesAny(text, "sci-fi", "science fiction")) {
+            List<Movie> movies = movieService.getMoviesByGenre("Sci-Fi");
+            response.put("type", "suggestion");
+            response.put("movies", movies);
+
+        } else if (matchesAny(text, "romance")) {
+            List<Movie> movies = movieService.getMoviesByGenre("Romance");
+            response.put("type", "suggestion");
+            response.put("movies", movies);
+
+        } else if (matchesAny(text, "action")) {
+            List<Movie> movies = movieService.getMoviesByGenre("Action");
+            response.put("type", "suggestion");
+            response.put("movies", movies);
+
+        // View bookings (moved before book)
+        } else if (matchesAny(text, "view bookings", "my bookings", "show bookings", "list bookings", "bookings")) {
             List<Booking> bookings = movieService.getAllBookings();
-            if (bookings.isEmpty()) return "📝 No bookings yet!";
-            StringBuilder response = new StringBuilder("📋 Your Bookings:\n");
-            for (Booking b : bookings) {
-                response.append("🎟️ ").append(b.getMovieTitle()).append(" (ID ").append(b.getBookingId()).append(") for ").append(b.getUsername()).append("\n");
+            response.put("type", "booking_list");
+            response.put("bookings", bookings);
+
+        // Booking logic
+        } else if (matchesAny(text, "book movie", "book id", "book")) {
+            try {
+                Long id = extractMovieId(text);
+                String result = movieService.bookMovie(id, user);
+                response.put("type", "booking");
+                response.put("message", result);
+            } catch (Exception e) {
+                response.put("type", "booking");
+                response.put("status", "error");
+                response.put("message", "Please use format: book movie id 2");
             }
-            return response.toString();
+
+        // Help fallback
         } else {
-            return "💬 Try asking: \"Suggest me a Sci-Fi movie\", \"Book movie id 2\", or \"View bookings\".";
+            response.put("type", "help");
+            response.put("message", "Try:\n- Suggest me a Sci-Fi movie\n- Book movie id 2\n- View bookings");
         }
+
+        return response;
     }
 
-    @GetMapping("/book")
-    public String book(@RequestParam Long id, @RequestParam(defaultValue = "User") String user) {
-        return movieService.bookMovie(id, user);
+    // Match user input with possible keywords
+    private boolean matchesAny(String input, String... keywords) {
+        for (String keyword : keywords) {
+            if (input.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    @GetMapping("/bookings")
-    public List<Booking> viewBookings() {
-        return movieService.getAllBookings();
+    // Extract movie ID from message (e.g. "book movie id 2")
+    private Long extractMovieId(String text) throws NumberFormatException {
+        String[] words = text.split(" ");
+        for (int i = words.length - 1; i >= 0; i--) {
+            try {
+                return Long.parseLong(words[i]);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        throw new NumberFormatException("No valid movie ID found");
     }
 }
