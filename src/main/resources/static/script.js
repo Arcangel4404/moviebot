@@ -1,33 +1,49 @@
-const chatMessages = document.getElementById('chat-messages');
-const userInput = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-
-function appendMessage(text, sender) {
-    const msg = document.createElement('div');
-    msg.className = `message ${sender}`;
-    msg.innerText = text;
-    chatMessages.appendChild(msg);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMessage();
+document.getElementById("user-input").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") sendMessage();
 });
 
 function sendMessage() {
-    const message = userInput.value.trim();
-    if (message === '') return;
+  const input = document.getElementById("user-input");
+  const message = input.value.trim();
+  if (!message) return;
 
-    appendMessage(message, 'user');
-    userInput.value = '';
+  addMessage("user", message);
+  input.value = "";
 
-    fetch(`/chat/message?text=${encodeURIComponent(message)}`)
-        .then(res => res.text())
-        .then(data => {
-            appendMessage(data, 'bot');
-        })
-        .catch(() => {
-            appendMessage("Sorry, something went wrong.", 'bot');
-        });
+  fetch(`http://localhost:8080/chat/message?text=${encodeURIComponent(message)}&user=Parinay`)
+    .then(res => res.json())
+    .then(data => handleBotResponse(data));
+}
+
+function addMessage(sender, text) {
+  const msgDiv = document.createElement("div");
+  msgDiv.className = `message ${sender}`;
+  msgDiv.innerText = text;
+  document.getElementById("chat-messages").appendChild(msgDiv);
+  scrollToBottom();
+}
+
+function handleBotResponse(data) {
+  if (data.type === "suggestion") {
+    let list = "Suggestions:\n";
+    data.movies.forEach(movie => {
+      list += `${movie.title} (${movie.genre}) - ID ${movie.id}\n`;
+    });
+    addMessage("bot", list);
+  } else if (data.type === "booking") {
+    addMessage("bot", data.message);
+  } else if (data.type === "booking_list") {
+    let list = "Your Bookings:\n";
+    data.bookings.forEach(b => {
+      list += `${b.movieTitle} (ID ${b.bookingId}) for ${b.username}\n`;
+    });
+    addMessage("bot", list);
+  } else {
+    addMessage("bot", data.message || "I didn't understand that.");
+  }
+}
+
+function scrollToBottom() {
+  const chat = document.getElementById("chat-messages");
+  chat.scrollTop = chat.scrollHeight;
 }
